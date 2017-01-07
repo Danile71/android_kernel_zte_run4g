@@ -31,6 +31,8 @@
 #include <cust_diso.h>
 #endif
 
+
+
 #ifdef CONFIG_USB_MTK_OTG
 
 extern struct musb *mtk_musb;
@@ -59,9 +61,18 @@ module_param(delay_time,int,0644);
 u32 delay_time1 = 55;
 module_param(delay_time1,int,0644);
 
+//OTG
+#define CONFIG_MTK_BQ24158_SUPPORT
+extern void bq24158_set_opa_mode(kal_uint32 val);
+extern void bq24158_set_oreg(kal_uint32 val);
+extern void bq24158_set_otg_pl(kal_uint32 val);
+extern void bq24158_set_otg_en(kal_uint32 val);
+extern kal_uint32 bq24158_config_interface_liao (kal_uint8 RegNum, kal_uint8 val);
+//OTG
+
 void mt_usb_set_vbus(struct musb *musb, int is_on)
 {
-    DBG(0,"mt65xx_usb20_vbus++,is_on=%d\r\n",is_on);
+    printk("mt65xx_usb20_vbus++,is_on=%d\r\n",is_on);
 #ifndef FPGA_PLATFORM
     if(is_on){
         //power on VBUS, implement later...
@@ -71,6 +82,12 @@ void mt_usb_set_vbus(struct musb *musb, int is_on)
         fan5405_set_otg_en(1);
     #elif defined(MTK_NCP1851_SUPPORT) || defined(MTK_BQ24196_SUPPORT)
         tbl_charger_otg_vbus((work_busy(&musb->id_pin_work.work)<< 8)| 1);
+//OTG
+#elif defined(CONFIG_MTK_BQ24158_SUPPORT)
+        bq24158_set_opa_mode(1);
+        bq24158_set_otg_pl(1);
+        bq24158_set_otg_en(1);
+//OTG
     #elif defined(MTK_BQ24261_SUPPORT)
         #if !defined(MTK_DUAL_INPUT_CHARGER_SUPPORT) 
             bq24261_set_en_boost(1);
@@ -82,6 +99,7 @@ void mt_usb_set_vbus(struct musb *musb, int is_on)
             #endif
             mt_set_gpio_mode(GPIO_OTG_DRVVBUS_PIN,GPIO_OTG_DRVVBUS_PIN_M_GPIO);
             mt_set_gpio_out(GPIO_OTG_DRVVBUS_PIN,GPIO_OUT_ONE);
+printk("mt65xx_usb20_vbus++,is_on2=%d\r\n",is_on);
         #endif
     #else
 		mt_set_gpio_mode(GPIO_OTG_DRVVBUS_PIN,GPIO_OTG_DRVVBUS_PIN_M_GPIO);
@@ -92,6 +110,11 @@ void mt_usb_set_vbus(struct musb *musb, int is_on)
     #ifdef MTK_FAN5405_SUPPORT
         fan5405_config_interface_liao(0x01,0x30);
 		fan5405_config_interface_liao(0x02,0x8e);
+//OTG
+  #elif defined(CONFIG_MTK_BQ24158_SUPPORT)		
+        bq24158_config_interface_liao(0x01,0x30);
+		bq24158_config_interface_liao(0x02,0x8e);
+//OTG
     #elif defined(MTK_NCP1851_SUPPORT) || defined(MTK_BQ24196_SUPPORT)
         tbl_charger_otg_vbus((work_busy(&musb->id_pin_work.work)<< 8)| 0);
     #elif defined(MTK_BQ24261_SUPPORT)
@@ -133,12 +156,13 @@ int mt_usb_get_vbus_status(struct musb *musb)
 
 void mt_usb_init_drvvbus(void)
 {
-#if !(defined(SWITCH_CHARGER) || defined(FPGA_PLATFORM))
+//#if !(defined(SWITCH_CHARGER123) || defined(FPGA_PLATFORM))
+	printk("DANIL GPIO_OTG_DRVVBUS_PIN = %d||%d",GPIO_OTG_DRVVBUS_PIN,IDDIG_EINT_PIN);
 	mt_set_gpio_mode(GPIO_OTG_DRVVBUS_PIN,GPIO_OTG_DRVVBUS_PIN_M_GPIO);//should set GPIO2 as gpio mode.
 	mt_set_gpio_dir(GPIO_OTG_DRVVBUS_PIN,GPIO_DIR_OUT);
 	mt_get_gpio_pull_enable(GPIO_OTG_DRVVBUS_PIN);
 	mt_set_gpio_pull_select(GPIO_OTG_DRVVBUS_PIN,GPIO_PULL_UP);
-#endif
+//#endif
 }
 
 u32 sw_deboun_time = 400;
